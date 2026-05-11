@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Profitability Calculator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4ecf3 100%);
+    color: #1f2937;
+    min-height: 100vh;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  header {
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    color: #6b7280;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    border: 1px solid #e5e7eb;
+  }
+  .card h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #111827;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+  .row {
+    display: grid;
+    gap: 14px;
+  }
+  .row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .row.cols-3 { grid-template-columns: 2fr 1fr 1fr; }
+  .row.team-row { grid-template-columns: 2fr 1fr 1fr auto; align-items: end; }
+  .row.member-mgmt { grid-template-columns: 2fr 1fr auto; align-items: end; }
+  @media (max-width: 640px) {
+    .row.cols-2, .row.cols-3, .row.team-row, .row.member-mgmt {
+      grid-template-columns: 1fr;
+    }
+  }
+  .toggle-group {
+    display: inline-flex;
+    background: #f3f4f6;
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 14px;
+  }
+  .toggle-group button {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.15s;
+  }
+  .toggle-group button.active {
+    background: #fff;
+    color: #111827;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  button.primary {
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.primary:hover { background: #4338ca; }
+  button.secondary {
+    background: #fff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button.secondary:hover { background: #eef2ff; }
+  button.danger-ghost {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  button.danger-ghost:hover { background: #fef2f2; }
+  .cost-display {
+    background: #f9fafb;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    text-align: right;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: 1fr; }
+  }
+  .summary-item {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+  }
+  .summary-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .summary-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #111827;
+  }
+  .verdict {
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.05rem;
+    transition: all 0.2s;
+  }
+  .verdict.good {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+  }
+  .verdict.bad {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+  .verdict.neutral {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+  }
+  .verdict-icon {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+  .verdict-detail {
+    font-size: 0.85rem;
+    font-weight: 400;
+    margin-top: 4px;
+    opacity: 0.9;
+  }
+  .add-line-btn {
+    width: 100%;
+    background: transparent;
+    border: 1.5px dashed #c7d2fe;
+    color: #4f46e5;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .add-line-btn:hover {
+    background: #eef2ff;
+    border-color: #818cf8;
+  }
+  .hidden { display: none; }
+  .help-text {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin-top: 4px;
+  }
+  .members-list {
+    margin-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 12px;
+  }
+  .member-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #eef2ff;
+    color: #4338ca;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    margin: 3px;
+  }
+  .member-chip .remove {
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.6;
+    font-weight: bold;
+  }
+  .member-chip .remove:hover { opacity: 1; }
+  details {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0;
+    margin-bottom: 14px;
+  }
+  details summary {
+    cursor: pointer;
+    padding: 12px 14px;
+    font-weight: 500;
+    color: #374151;
+    user-select: none;
+  }
+  details[open] summary {
+    border-bottom: 1px solid #e5e7eb;
+  }
+  details .details-body { padding: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Project Profitability Calculator</h1>
+    <p class="subtitle">Quickly check if a project clears the 20% profit margin minimum. Team rates sync from your Google Sheet.</p>
+  </header>
+
+  <!-- 1. Client -->
+  <div class="card">
+    <h2><span class="badge">1</span> Client</h2>
+    <div class="row cols-2">
+      <div>
+        <label for="clientName">Client name</label>
+        <input type="text" id="clientName" placeholder="e.g., Acme Corp">
+      </div>
+      <div>
+        <label for="projectName">Project / task (optional)</label>
+        <input type="text" id="projectName" placeholder="e.g., Q2 Landing Page">
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Revenue -->
+  <div class="card">
+    <h2><span class="badge">2</span> Revenue</h2>
+    <div class="toggle-group" id="revenueToggle">
+      <button type="button" class="active" data-mode="fixed">Fixed Rate</button>
+      <button type="button" data-mode="hourly">Hourly</button>
+    </div>
+
+    <div id="fixedRevenuePanel">
+      <label for="fixedAmount">Fixed project amount ($)</label>
+      <input type="number" id="fixedAmount" min="0" step="0.01" placeholder="0.00">
+    </div>
+
+    <div id="hourlyRevenuePanel" class="hidden">
+      <div class="row cols-2">
+        <div>
+          <label for="clientHourlyRate">Client hourly rate ($)</label>
+          <input type="number" id="clientHourlyRate" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div>
+          <label for="billableHours">Total billable hours</label>
+          <input type="number" id="billableHours" min="0" step="0.25" placeholder="0">
+        </div>
+      </div>
+      <p class="help-text">Revenue = client hourly rate × total billable hours</p>
+    </div>
+  </div>
+
+  <!-- 3. Labor cost -->
+  <div class="card">
+    <h2><span class="badge">3</span> Billable Labor Cost</h2>
+
+    <div id="syncPanel" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:0.85rem;font-weight:600;color:#111827;" id="syncStatus">Loading team rates…</div>
+        <div style="font-size:0.78rem;color:#6b7280;margin-top:2px;" id="syncDetail">Fetching from Google Sheets</div>
+      </div>
+      <button type="button" class="secondary" id="refreshBtn">↻ Refresh</button>
+    </div>
+    <div class="members-list" id="membersList" style="margin-top:0;border-top:none;padding-top:0;"></div>
+
+    <div id="laborLines"></div>
+    <button type="button" class="add-line-btn" id="addLineBtn">+ Add team member to this project</button>
+  </div>
+
+  <!-- 4 & 5. Results -->
+  <div class="card">
+    <h2><span class="badge">4</span> Results</h2>
+    <div class="summary">
+      <div class="summary-item">
+        <div class="summary-label">Revenue</div>
+        <div class="summary-value" id="revenueDisplay">$0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total Labor Cost</div>
+        <div class="summary-value" id="costDisplay">$0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Net Income</div>
+        <div class="summary-value" id="incomeDisplay">$0.00</div>
+      </div>
+    </div>
+
+    <div class="verdict neutral" id="verdict">
+      <div class="verdict-icon">—</div>
+      <div>Enter revenue and labor to see profitability</div>
+      <div class="verdict-detail" id="verdictDetail"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6Q77E84MzIaMNnmXJaxcCcOJwUOvZ4rnt-uyag30VUNpCvQdBr4Fy-r0h8rEd1ImlIZcpiGTkqFZd/pub?gid=0&single=true&output=csv';
+  const CACHE_KEY = 'profitabilityCalc.rosterCache.v2';
+  const PROFIT_GOAL = 0.20;
+
+  // State
+  let members = loadCachedMembers();
+  let lineItems = []; // { id, memberId, hours }
+  let revenueMode = 'fixed';
+  let lineIdCounter = 0;
+
+  // Helpers
+  function loadCachedMembers() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return parsed.members || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function cacheMembers(members) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ members, cachedAt: Date.now() }));
+    } catch (e) {
+      console.warn('Could not cache roster:', e);
+    }
+  }
+
+  function getCachedAt() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw).cachedAt;
+    } catch (e) { return null; }
+  }
+
+  // Tiny CSV parser that handles quoted fields
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"' && text[i+1] === '"') { field += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else { field += c; }
+      } else {
+        if (c === '"') { inQuotes = true; }
+        else if (c === ',') { row.push(field); field = ''; }
+        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+        else if (c === '\r') { /* skip */ }
+        else { field += c; }
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(cell => cell && cell.trim()));
+  }
+
+  function parseRate(s) {
+    if (typeof s !== 'string') s = String(s || '');
+    // Strip currency symbols, commas, "/hr" etc.
+    const cleaned = s.replace(/[^0-9.\-]/g, '');
+    const n = parseFloat(cleaned);
+    return isFinite(n) ? n : NaN;
+  }
+
+  function fmtTimeAgo(ts) {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + ' hr ago';
+    return new Date(ts).toLocaleDateString();
+  }
+
+  async function fetchRoster() {
+    const statusEl = document.getElementById('syncStatus');
+    const detailEl = document.getElementById('syncDetail');
+    statusEl.textContent = 'Loading team rates…';
+    statusEl.style.color = '#111827';
+    detailEl.textContent = 'Fetching from Google Sheets';
+
+    try {
+      const url = SHEET_CSV_URL + '&_=' + Date.now(); // cache buster
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if (rows.length === 0) throw new Error('Empty sheet');
+
+      // Skip header row if first row's "rate" column doesn't parse as a number
+      let dataRows = rows;
+      if (rows.length > 0 && !isFinite(parseRate(rows[0][1]))) {
+        dataRows = rows.slice(1);
+      }
+
+      const fetched = dataRows
+        .map((r, idx) => {
+          const name = (r[0] || '').trim();
+          const rate = parseRate(r[1]);
+          if (!name || !isFinite(rate)) return null;
+          return { id: 'sheet_' + idx + '_' + name.toLowerCase().replace(/\s+/g, '_'), name, rate };
+        })
+        .filter(Boolean);
+
+      if (fetched.length === 0) throw new Error('No valid rows found');
+
+      members = fetched;
+      cacheMembers(members);
+      statusEl.textContent = `Synced — ${members.length} team member${members.length === 1 ? '' : 's'} loaded`;
+      statusEl.style.color = '#065f46';
+      detailEl.textContent = `Updated ${fmtTimeAgo(Date.now())} · from Google Sheets`;
+      renderMembersList();
+      renderLineItems();
+    } catch (err) {
+      console.warn('Roster fetch failed:', err);
+      statusEl.textContent = members.length > 0 ? 'Using cached roster' : 'Could not load roster';
+      statusEl.style.color = members.length > 0 ? '#92400e' : '#991b1b';
+      const cachedAt = getCachedAt();
+      if (members.length > 0 && cachedAt) {
+        detailEl.textContent = `Offline or sheet unreachable · cached ${fmtTimeAgo(cachedAt)}`;
+      } else {
+        detailEl.textContent = 'Check your connection and try again. (' + err.message + ')';
+      }
+      renderMembersList();
+      renderLineItems();
+    }
+  }
+
+  function fmtMoney(n) {
+    if (!isFinite(n)) n = 0;
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function uid() {
+    return 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  }
+
+  // ---- Revenue ----
+  const revenueToggle = document.getElementById('revenueToggle');
+  revenueToggle.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-mode]');
+    if (!btn) return;
+    revenueMode = btn.dataset.mode;
+    revenueToggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('fixedRevenuePanel').classList.toggle('hidden', revenueMode !== 'fixed');
+    document.getElementById('hourlyRevenuePanel').classList.toggle('hidden', revenueMode !== 'hourly');
+    recalc();
+  });
+
+  ['fixedAmount', 'clientHourlyRate', 'billableHours'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalc);
+  });
+
+  function getRevenue() {
+    if (revenueMode === 'fixed') {
+      return parseFloat(document.getElementById('fixedAmount').value) || 0;
+    } else {
+      const rate = parseFloat(document.getElementById('clientHourlyRate').value) || 0;
+      const hours = parseFloat(document.getElementById('billableHours').value) || 0;
+      return rate * hours;
+    }
+  }
+
+  // ---- Roster display (read-only, synced from Sheets) ----
+  const membersListEl = document.getElementById('membersList');
+  document.getElementById('refreshBtn').addEventListener('click', fetchRoster);
+
+  function renderMembersList() {
+    if (members.length === 0) {
+      membersListEl.innerHTML = '';
+      return;
+    }
+    membersListEl.innerHTML = members
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(m => `
+        <span class="member-chip">${escapeHtml(m.name)} · ${fmtMoney(m.rate)}/hr</span>
+      `).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---- Labor line items ----
+  const laborLinesEl = document.getElementById('laborLines');
+
+  document.getElementById('addLineBtn').addEventListener('click', () => {
+    lineItems.push({ id: ++lineIdCounter, memberId: '', hours: 0 });
+    renderLineItems();
+  });
+
+  function renderLineItems() {
+    if (lineItems.length === 0) {
+      laborLinesEl.innerHTML = '<p class="help-text" style="margin-bottom:8px;">No team members added to this project yet.</p>';
+      recalc();
+      return;
+    }
+
+    laborLinesEl.innerHTML = lineItems.map(li => {
+      const options = ['<option value="">— Select team member —</option>']
+        .concat(members.map(m =>
+          `<option value="${m.id}" ${m.id === li.memberId ? 'selected' : ''}>${escapeHtml(m.name)} (${fmtMoney(m.rate)}/hr)</option>`
+        )).join('');
+      const member = members.find(m => m.id === li.memberId);
+      const cost = member ? (member.rate * (parseFloat(li.hours) || 0)) : 0;
+      return `
+        <div class="row team-row" style="margin-bottom:12px;" data-line-id="${li.id}">
+          <div>
+            <label>Team member</label>
+            <select class="line-member">${options}</select>
+          </div>
+          <div>
+            <label>Hours</label>
+            <input type="number" class="line-hours" min="0" step="0.25" value="${li.hours || ''}" placeholder="0">
+          </div>
+          <div>
+            <label>Cost</label>
+            <div class="cost-display line-cost">${fmtMoney(cost)}</div>
+          </div>
+          <div>
+            <button type="button" class="danger-ghost line-remove" title="Remove line">✕</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Wire up events
+    laborLinesEl.querySelectorAll('[data-line-id]').forEach(row => {
+      const lineId = parseInt(row.dataset.lineId, 10);
+      const li = lineItems.find(l => l.id === lineId);
+      row.querySelector('.line-member').addEventListener('change', (e) => {
+        li.memberId = e.target.value;
+        renderLineItems();
+      });
+      row.querySelector('.line-hours').addEventListener('input', (e) => {
+        li.hours = parseFloat(e.target.value) || 0;
+        const member = members.find(m => m.id === li.memberId);
+        const cost = member ? member.rate * li.hours : 0;
+        row.querySelector('.line-cost').textContent = fmtMoney(cost);
+        recalc();
+      });
+      row.querySelector('.line-remove').addEventListener('click', () => {
+        lineItems = lineItems.filter(l => l.id !== lineId);
+        renderLineItems();
+      });
+    });
+
+    recalc();
+  }
+
+  function refreshLineDropdowns() {
+    // Re-render to refresh dropdown options
+    if (lineItems.length > 0) renderLineItems();
+  }
+
+  // ---- Recalc ----
+  function recalc() {
+    const revenue = getRevenue();
+    let cost = 0;
+    lineItems.forEach(li => {
+      const member = members.find(m => m.id === li.memberId);
+      if (member) cost += member.rate * (parseFloat(li.hours) || 0);
+    });
+    const income = revenue - cost;
+
+    document.getElementById('revenueDisplay').textContent = fmtMoney(revenue);
+    document.getElementById('costDisplay').textContent = fmtMoney(cost);
+    document.getElementById('incomeDisplay').textContent = fmtMoney(income);
+
+    const verdictEl = document.getElementById('verdict');
+    const detailEl = document.getElementById('verdictDetail');
+    const iconEl = verdictEl.querySelector('.verdict-icon');
+    const mainTextEl = verdictEl.querySelector('div:nth-child(2)');
+
+    if (revenue <= 0) {
+      verdictEl.className = 'verdict neutral';
+      iconEl.textContent = '—';
+      mainTextEl.textContent = 'Enter revenue and labor to see profitability';
+      detailEl.textContent = '';
+      return;
+    }
+
+    const margin = income / revenue;
+    const marginPct = (margin * 100).toFixed(1);
+    const goalDollars = revenue * PROFIT_GOAL;
+    const gap = income - goalDollars;
+
+    if (margin >= PROFIT_GOAL) {
+      verdictEl.className = 'verdict good';
+      iconEl.textContent = '✓';
+      mainTextEl.textContent = `Profitable — ${marginPct}% margin (goal: 20%)`;
+      detailEl.textContent = `That's ${fmtMoney(gap)} above the 20% target of ${fmtMoney(goalDollars)}.`;
+    } else {
+      verdictEl.className = 'verdict bad';
+      iconEl.textContent = '✗';
+      mainTextEl.textContent = `Below target — ${marginPct}% margin (goal: 20%)`;
+      if (margin < 0) {
+        detailEl.textContent = `This project is losing money. You'd need ${fmtMoney(Math.abs(gap))} more in revenue (or less in cost) to hit 20%.`;
+      } else {
+        detailEl.textContent = `Short by ${fmtMoney(Math.abs(gap))} of the 20% target (${fmtMoney(goalDollars)}).`;
+      }
+    }
+  }
+
+  // ---- Init ----
+  renderMembersList();
+  renderLineItems();
+  recalc();
+  fetchRoster(); // sync from Google Sheets on load
+})();
+</script>
+</body>
+</html>
