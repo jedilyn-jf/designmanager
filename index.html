@@ -87,7 +87,7 @@
   }
   .row.cols-2 { grid-template-columns: 1fr 1fr; }
   .row.cols-3 { grid-template-columns: 2fr 1fr 1fr; }
-  .row.team-row { grid-template-columns: 2fr 1fr 1fr auto; align-items: end; }
+  .row.team-row { grid-template-columns: 2fr 1fr 1fr 2fr auto; align-items: end; }
   .row.member-mgmt { grid-template-columns: 2fr 1fr auto; align-items: end; }
   @media (max-width: 640px) {
     .row.cols-2, .row.cols-3, .row.team-row, .row.member-mgmt {
@@ -363,7 +363,7 @@
       text-align: left;
     }
 
-    .row.team-row { grid-template-columns: 2fr 80px 100px; gap: 12px; }
+    .row.team-row { grid-template-columns: 1.5fr 60px 80px 2fr; gap: 10px; }
     .row.cols-2 { grid-template-columns: 1fr 1fr; }
 
     .summary { gap: 10px; margin-bottom: 12px; }
@@ -839,7 +839,7 @@
   const laborLinesEl = document.getElementById('laborLines');
 
   document.getElementById('addLineBtn').addEventListener('click', () => {
-    lineItems.push({ id: ++lineIdCounter, memberId: '', hours: 0 });
+    lineItems.push({ id: ++lineIdCounter, memberId: '', hours: 0, notes: '' });
     renderLineItems();
   });
 
@@ -872,7 +872,11 @@
             <div class="cost-display line-cost">${fmtMoney(cost)}</div>
           </div>
           <div>
-            <button type="button" class="danger-ghost line-remove" title="Remove line">✕</button>
+            <label>Notes</label>
+            <input type="text" class="line-notes" value="${escapeHtml(li.notes || '')}" placeholder="e.g., revisions, scope">
+          </div>
+          <div>
+            <button type="button" class="danger-ghost line-remove no-print" title="Remove line">✕</button>
           </div>
         </div>
       `;
@@ -892,6 +896,9 @@
         const cost = member ? member.rate * li.hours : 0;
         row.querySelector('.line-cost').textContent = fmtMoney(cost);
         recalc();
+      });
+      row.querySelector('.line-notes').addEventListener('input', (e) => {
+        li.notes = e.target.value;
       });
       row.querySelector('.line-remove').addEventListener('click', () => {
         lineItems = lineItems.filter(l => l.id !== lineId);
