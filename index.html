@@ -409,6 +409,13 @@
   <!-- 1. Client -->
   <div class="card">
     <h2><span class="badge">1</span> Client</h2>
+    <div style="margin-bottom: 14px;" class="no-print">
+      <label for="clientSelect">Select client</label>
+      <select id="clientSelect">
+        <option value="__new__">+ New Client (one-off)</option>
+      </select>
+      <p class="help-text" id="clientsStatus">Loading client list…</p>
+    </div>
     <div class="row cols-2">
       <div>
         <label for="clientName">Client name</label>
@@ -505,11 +512,15 @@
   'use strict';
 
   const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6Q77E84MzIaMNnmXJaxcCcOJwUOvZ4rnt-uyag30VUNpCvQdBr4Fy-r0h8rEd1ImlIZcpiGTkqFZd/pub?gid=0&single=true&output=csv';
+  const CLIENTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6Q77E84MzIaMNnmXJaxcCcOJwUOvZ4rnt-uyag30VUNpCvQdBr4Fy-r0h8rEd1ImlIZcpiGTkqFZd/pub?gid=1560041460&single=true&output=csv';
   const CACHE_KEY = 'profitabilityCalc.rosterCache.v2';
+  const CLIENTS_CACHE_KEY = 'profitabilityCalc.clientsCache.v1';
   const PROFIT_GOAL = 0.20;
 
   // State
   let members = loadCachedMembers();
+  let clients = loadCachedClients();
+  let selectedClientId = '__new__'; // '__new__' or a client id
   let lineItems = []; // { id, memberId, hours }
   let revenueMode = 'fixed';
   let lineIdCounter = 0;
@@ -531,6 +542,25 @@
       localStorage.setItem(CACHE_KEY, JSON.stringify({ members, cachedAt: Date.now() }));
     } catch (e) {
       console.warn('Could not cache roster:', e);
+    }
+  }
+
+  function loadCachedClients() {
+    try {
+      const raw = localStorage.getItem(CLIENTS_CACHE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return parsed.clients || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function cacheClients(clients) {
+    try {
+      localStorage.setItem(CLIENTS_CACHE_KEY, JSON.stringify({ clients, cachedAt: Date.now() }));
+    } catch (e) {
+      console.warn('Could not cache clients:', e);
     }
   }
 
@@ -637,6 +667,113 @@
     }
   }
 
+  async function fetchClients() {
+    const statusEl = document.getElementById('clientsStatus');
+    if (statusEl) statusEl.textContent = 'Loading client list…';
+
+    try {
+      const url = CLIENTS_CSV_URL + '&_=' + Date.now();
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if (rows.length === 0) throw new Error('Empty sheet');
+
+      // Skip header row if first row doesn't have a parseable name in column A
+      // OR the second column contains the word "rate"
+      let dataRows = rows;
+      const firstRowSecondCell = (rows[0][1] || '').toLowerCase();
+      if (firstRowSecondCell.includes('rate') || firstRowSecondCell.includes('hourly')) {
+        dataRows = rows.slice(1);
+      }
+
+      const fetched = dataRows
+        .map((r, idx) => {
+          const name = (r[0] || '').trim();
+          if (!name) return null;
+          const hourly = parseRate(r[1]);
+          const fixed = parseRate(r[2]);
+          return {
+            id: 'client_' + idx + '_' + name.toLowerCase().replace(/\s+/g, '_'),
+            name,
+            hourlyRate: isFinite(hourly) ? hourly : null,
+            fixedAmount: isFinite(fixed) ? fixed : null
+          };
+        })
+        .filter(Boolean);
+
+      clients = fetched;
+      cacheClients(clients);
+      if (statusEl) statusEl.textContent = `Synced — ${clients.length} client${clients.length === 1 ? '' : 's'} loaded`;
+      renderClientDropdown();
+    } catch (err) {
+      console.warn('Clients fetch failed:', err);
+      if (statusEl) {
+        statusEl.textContent = clients.length > 0
+          ? `Using cached client list (${clients.length})`
+          : 'Could not load client list. You can still use + New Client.';
+      }
+      renderClientDropdown();
+    }
+  }
+
+  function renderClientDropdown() {
+    const select = document.getElementById('clientSelect');
+    const currentSelection = select.value;
+    select.innerHTML = '<option value="__new__">+ New Client (one-off)</option>' +
+      clients
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
+        .join('');
+    // Restore prior selection if still valid
+    if (currentSelection && (currentSelection === '__new__' || clients.find(c => c.id === currentSelection))) {
+      select.value = currentSelection;
+    }
+  }
+
+  function applySelectedClient() {
+    const select = document.getElementById('clientSelect');
+    selectedClientId = select.value;
+    const clientNameEl = document.getElementById('clientName');
+
+    if (selectedClientId === '__new__') {
+      // New client — clear name, clear rate fields
+      clientNameEl.value = '';
+      clientNameEl.placeholder = 'e.g., Acme Corp';
+      document.getElementById('fixedAmount').value = '';
+      document.getElementById('clientHourlyRate').value = '';
+      recalc();
+      return;
+    }
+
+    const client = clients.find(c => c.id === selectedClientId);
+    if (!client) {
+      // Selection no longer valid — fall back to new
+      select.value = '__new__';
+      selectedClientId = '__new__';
+      return;
+    }
+
+    clientNameEl.value = client.name;
+    applyClientRateForCurrentMode();
+    recalc();
+  }
+
+  function applyClientRateForCurrentMode() {
+    if (selectedClientId === '__new__') return;
+    const client = clients.find(c => c.id === selectedClientId);
+    if (!client) return;
+
+    if (revenueMode === 'fixed' && client.fixedAmount != null) {
+      document.getElementById('fixedAmount').value = client.fixedAmount;
+    } else if (revenueMode === 'hourly' && client.hourlyRate != null) {
+      document.getElementById('clientHourlyRate').value = client.hourlyRate;
+    }
+    // If client doesn't have the rate for the chosen mode, leave the field untouched
+    // so user can manually enter it.
+  }
+
   function fmtMoney(n) {
     if (!isFinite(n)) n = 0;
     return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -645,6 +782,9 @@
   function uid() {
     return 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   }
+
+  // ---- Client dropdown ----
+  document.getElementById('clientSelect').addEventListener('change', applySelectedClient);
 
   // ---- Revenue ----
   const revenueToggle = document.getElementById('revenueToggle');
@@ -655,6 +795,8 @@
     revenueToggle.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     document.getElementById('fixedRevenuePanel').classList.toggle('hidden', revenueMode !== 'fixed');
     document.getElementById('hourlyRevenuePanel').classList.toggle('hidden', revenueMode !== 'hourly');
+    // Re-apply the client's rate for the newly selected mode
+    applyClientRateForCurrentMode();
     recalc();
   });
 
@@ -840,10 +982,12 @@
   });
 
   // ---- Init ----
+  renderClientDropdown(); // render from cache immediately
   renderMembersList();
   renderLineItems();
   recalc();
-  fetchRoster(); // sync from Google Sheets on load
+  fetchRoster();  // sync team rates from Google Sheets
+  fetchClients(); // sync client list from Google Sheets
 })();
 </script>
 </body>
