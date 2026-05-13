@@ -100,18 +100,26 @@
   }
   .plan-item-margin.good { background: #d1fae5; color: #065f46; }
   .plan-item-margin.bad { background: #fee2e2; color: #991b1b; }
-  .plan-item-delete {
+  .plan-item-action {
     background: transparent;
     border: none;
     color: #9ca3af;
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
     font-size: 0.9rem;
-    opacity: 0;
-    transition: opacity 0.15s;
+    transition: all 0.15s;
+    line-height: 1;
+    flex-shrink: 0;
   }
-  .plan-item:hover .plan-item-delete { opacity: 1; }
-  .plan-item-delete:hover { color: #ef4444; }
+  .plan-item-action:hover {
+    background: #f3f4f6;
+    color: #4f46e5;
+  }
+  .plan-item-delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
+  }
   .sidebar-btn {
     width: 100%;
     padding: 10px 12px;
@@ -1121,7 +1129,8 @@
                 <div class="plan-item-meta">${escapeHtml(meta)}</div>
               </div>
               ${marginClass ? `<span class="plan-item-margin ${marginClass}">${marginText}</span>` : ''}
-              <button class="plan-item-delete" data-plan-id="${p.id}" title="Delete plan">✕</button>
+              <button class="plan-item-action plan-item-copy" data-plan-id="${p.id}" title="Duplicate plan">⎘</button>
+              <button class="plan-item-action plan-item-delete" data-plan-id="${p.id}" title="Delete plan">✕</button>
             </div>
           `;
         }).join('');
@@ -1129,10 +1138,16 @@
       // Wire up click events
       listEl.querySelectorAll('.plan-item').forEach(el => {
         el.addEventListener('click', (e) => {
-          if (e.target.matches('.plan-checkbox') || e.target.matches('.plan-item-delete')) return;
+          if (e.target.matches('.plan-checkbox') || e.target.closest('.plan-item-action')) return;
           const id = el.dataset.planId;
           const plan = plans.find(p => p.id === id);
           if (plan) loadPlanIntoCalculator(plan);
+        });
+      });
+      listEl.querySelectorAll('.plan-item-copy').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await handleDuplicatePlan(btn.dataset.planId);
         });
       });
       listEl.querySelectorAll('.plan-checkbox').forEach(cb => {
@@ -1176,6 +1191,29 @@
   }
 
   // ---- Save / New plan handlers ----
+
+  async function handleDuplicatePlan(planId) {
+    const original = plans.find(p => p.id === planId);
+    if (!original) return;
+    const suggested = (original.name || 'Plan') + ' (Copy)';
+    const newName = prompt('Name for the new copy:', suggested);
+    if (!newName || !newName.trim()) return;
+    try {
+      // Build a new plan from the original, omitting id/timestamps so backend assigns new ones
+      const copy = Object.assign({}, original, {
+        id: null,
+        name: newName.trim(),
+        createdAt: null,
+        updatedAt: null
+      });
+      const saved = await savePlanToBackend(copy);
+      plans.push(saved);
+      renderSidebar();
+    } catch (err) {
+      console.warn('Duplicate failed:', err);
+      alert('Could not duplicate plan: ' + err.message);
+    }
+  }
 
   async function handleSavePlan() {
     const btn = document.getElementById('savePlanBtn');
