@@ -547,7 +547,7 @@
   <aside class="sidebar no-print">
     <div class="sidebar-section">
       <button type="button" class="sidebar-btn primary" id="newPlanBtn">+ New Plan</button>
-      <button type="button" class="sidebar-btn outline" id="savePlanBtn">💾 Save Current Plan</button>
+      <button type="button" class="sidebar-btn outline" id="savePlanBtn">💾 Save as New Plan</button>
     </div>
     <div class="sidebar-section">
       <h3>Saved Plans <span id="planCount" style="font-weight:400;color:#6b7280;font-size:0.8rem;"></span></h3>
@@ -1180,6 +1180,7 @@
     }
 
     updateExportButton();
+    updateSaveButtonLabel();
   }
 
   function updateExportButton() {
@@ -1188,6 +1189,20 @@
     const count = selectedPlanIds.size;
     exportBtn.disabled = count === 0;
     selCountEl.textContent = count + ' selected';
+  }
+
+  function updateSaveButtonLabel() {
+    const btn = document.getElementById('savePlanBtn');
+    if (!btn) return;
+    if (currentPlanId) {
+      const plan = plans.find(p => p.id === currentPlanId);
+      const name = plan ? plan.name : '';
+      btn.textContent = '💾 Update Plan' + (name ? ' (' + name + ')' : '');
+      btn.title = 'Update the plan you have loaded';
+    } else {
+      btn.textContent = '💾 Save as New Plan';
+      btn.title = 'Save the current calculator state as a new plan';
+    }
   }
 
   // ---- Save / New plan handlers ----
